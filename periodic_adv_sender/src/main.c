@@ -10,9 +10,16 @@
 
 #define NUM_RSP_SLOTS	  5
 #define NUM_SUBEVENTS	  5
-#define PACKET_SIZE	  5
+#define PACKET_SIZE		  5
 #define SUBEVENT_INTERVAL 0x30
 
+/*
+================================
+=#=#=#= Global Variables =#=#=#=
+================================
+*/
+
+// change these to alter the advertising interval
 static const struct bt_le_per_adv_param per_adv_params = {
 	.interval_min = 0xFF,
 	.interval_max = 0xFF,
@@ -31,8 +38,16 @@ static uint8_t backing_store[NUM_SUBEVENTS][PACKET_SIZE];
 BUILD_ASSERT(ARRAY_SIZE(bufs) == ARRAY_SIZE(subevent_data_params));
 BUILD_ASSERT(ARRAY_SIZE(backing_store) == ARRAY_SIZE(subevent_data_params));
 
-static void request_cb(struct bt_le_ext_adv *adv, const struct bt_le_per_adv_data_request *request)
-{
+static struct bt_conn *default_conn;
+
+/*
+================================
+=#=#=#= HELPER FUNCTIONS =#=#=#=
+================================
+*/
+
+// Function to handle the request for data from the receiver.
+static void request_cb(struct bt_le_ext_adv *adv, const struct bt_le_per_adv_data_request *request) {
 	int err;
 	uint8_t to_send;
 
@@ -53,8 +68,7 @@ static void request_cb(struct bt_le_ext_adv *adv, const struct bt_le_per_adv_dat
 	}
 }
 
-static bool get_address(struct bt_data *data, void *user_data)
-{
+static bool get_address(struct bt_data *data, void *user_data) {
 	bt_addr_le_t *addr = user_data;
 
 	if (data->type == BT_DATA_LE_BT_DEVICE_ADDRESS) {
@@ -66,8 +80,6 @@ static bool get_address(struct bt_data *data, void *user_data)
 
 	return true;
 }
-
-static struct bt_conn *default_conn;
 
 static void response_cb(struct bt_le_ext_adv *adv, struct bt_le_per_adv_response_info *info,
 			struct net_buf_simple *buf)
@@ -160,8 +172,10 @@ static void init_bufs(void)
 	}
 }
 
-int main(void)
-{
+
+// Function to initialise the Bluetooth subsystem.
+// Abstracted from main function to improve readability.
+static bool initialise_bt(void) {
 	int err;
 	struct bt_le_ext_adv *pawr_adv;
 
@@ -173,36 +187,43 @@ int main(void)
 	err = bt_enable(NULL);
 	if (err) {
 		printk("Bluetooth init failed (err %d)\n", err);
-		return 0;
+		return 1;
 	}
 
 	/* Create a non-connectable non-scannable advertising set */
 	err = bt_le_ext_adv_create(BT_LE_EXT_ADV_NCONN_NAME, &adv_cb, &pawr_adv);
 	if (err) {
 		printk("Failed to create advertising set (err %d)\n", err);
-		return 0;
+		return 1;
 	}
 
 	/* Set periodic advertising parameters */
 	err = bt_le_per_adv_set_param(pawr_adv, &per_adv_params);
 	if (err) {
 		printk("Failed to set periodic advertising parameters (err %d)\n", err);
-		return 0;
+		return 1;
 	}
 
 	/* Enable Periodic Advertising */
 	err = bt_le_per_adv_start(pawr_adv);
 	if (err) {
 		printk("Failed to enable periodic advertising (err %d)\n", err);
-		return 0;
+		return 1;
 	}
 
 	printk("Start Periodic Advertising\n");
 	err = bt_le_ext_adv_start(pawr_adv, BT_LE_EXT_ADV_START_DEFAULT);
 	if (err) {
 		printk("Failed to start extended advertising (err %d)\n", err);
-		return 0;
+		return 1;
 	}
+	return 0;
+}
+
+int main(void) {
+
+	bool err = initialise_bt();
+	if (err) return 1;
 
 	while (true) {
 		k_sleep(K_SECONDS(1));
