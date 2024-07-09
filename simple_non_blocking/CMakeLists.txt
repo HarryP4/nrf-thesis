@@ -5,7 +5,7 @@ if(DEFINED CUSTOM_BOILERPLATE)
     return()
 endif()
 
-set(COMMON_PATH ${CMAKE_CURRENT_LIST_DIR}/../../../common)
+set(COMMON_PATH ${CMAKE_CURRENT_LIST_DIR}/common)
 include(${COMMON_PATH}/common.cmake)
 
 GET_DEVICE_CONFIG_FILES(${BOARD} ../boards)

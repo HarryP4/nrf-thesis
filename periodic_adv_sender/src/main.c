@@ -8,8 +8,10 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gap.h>
 
-#define NUM_RSP_SLOTS	  5
-#define NUM_SUBEVENTS	  5
+#include "saadc_helpers.h"
+
+#define NUM_RSP_SLOTS	  4
+#define NUM_SUBEVENTS	  4
 #define PACKET_SIZE		  5
 #define SUBEVENT_INTERVAL 0x30
 
@@ -52,7 +54,8 @@ static void request_cb(struct bt_le_ext_adv *adv, const struct bt_le_per_adv_dat
 	uint8_t to_send;
 
 	/* Continuously send the same dummy data and listen to all response slots */
-
+	struct net_buf_simple newbufs[NUM_SUBEVENTS];
+	//newbufs[0].
 	to_send = MIN(request->count, ARRAY_SIZE(subevent_data_params));
 	for (size_t i = 0; i < to_send; i++) {
 		subevent_data_params[i].subevent =
@@ -165,7 +168,7 @@ static void init_bufs(void)
 		backing_store[i][0] = ARRAY_SIZE(backing_store[i]) - 1;
 		backing_store[i][1] = BT_DATA_MANUFACTURER_DATA;
 		backing_store[i][2] = 0x59; /* Nordic */
-		backing_store[i][3] = 0x00;
+		backing_store[i][3] = "data\0";
 
 		net_buf_simple_init_with_data(&bufs[i], &backing_store[i],
 					      ARRAY_SIZE(backing_store[i]));
