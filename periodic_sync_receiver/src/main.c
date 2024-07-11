@@ -71,6 +71,14 @@ static void recv_cb(struct bt_le_per_adv_sync *sync,
 	}
 
 	if (buf && buf->len) {
+		// Print received data
+		printk("DATA RECEIVED:\n");
+		for(int i = 0; i < buf->len; i++) {
+			printk("%d\n", buf->data[i]);
+		}
+		printk("\n");
+
+
 		/* Respond with own address for the advertiser to connect to */
 		net_buf_simple_reset(&rsp_buf);
 
@@ -163,8 +171,6 @@ static void scan_recv(const struct bt_le_scan_recv_info *info, struct net_buf_si
 	bt_data_parse(buf, data_cb, name);
 
 	if (strcmp(name, PAIRED_BOARD_NAME)) {
-		printk("ADV FOUND: %s\n", name);
-		printk(buf->data, buf->len); // idk if I can print like this...
 		return;
 	}
 
