@@ -31,8 +31,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SAADC_EXAMPLES_COMMON_H__
-#define SAADC_EXAMPLES_COMMON_H__
 
 #include <nrfx_gpiote.h>
 
@@ -143,41 +141,28 @@ static nrf_saadc_value_t m_samples_buffer_se[CHANNEL_COUNT_SE];
 static nrf_saadc_value_t m_samples_buffer_diff[CHANNEL_COUNT_DIFF];
 
 /** @brief Symbol specifying the number of SAADC samplings to trigger. */
-#define SAMPLING_ITERATIONS 8
+#define SAMPLING_ITERATIONS 1
 
-/** @brief Enum with the current state of the simple state machine. */
-//static state_t m_current_state = STATE_SINGLE_CONFIG;
-
-/** @brief Flag indicating that sampling on every specified channel is finished and buffer ( @ref m_samples_buffer ) is filled with samples. */
-static bool m_saadc_ready;
-
-
+// Enum for selecting SAADC mode
+enum mode {
+    SE,
+    DIFF
+};
 
 /**
- * @defgroup nrfx_saadc_examples_common Common SAADC module
- * @{
- * @ingroup nrfx_saadc_examples
+ * @brief Function for configuring single ended use of SAADC.
  *
- * @brief Module with common functionalities used in nrfx_saadc examples.
  */
-
+void setup_se();
 
 /**
- * @brief Function for setting up a GPIOTE task that toggles a given pin.
+ * @brief Function for configuring differential use of SAADC.
  *
- * @param pin The pin to toggle.
  */
-void gpiote_pin_toggle_task_setup(nrfx_gpiote_pin_t pin);
+void setup_diff();
 
-/**
- * @brief Function for setting up a pin to be toggled once specified event is triggered.
- *
- * @param pin The pin to toggle.
- * @param eep Address of the event register. This event will trigger the @p pin to toggle.
- */
-void pin_on_event_toggle_setup(nrfx_gpiote_pin_t pin,
-                               uint32_t          eep);
+void sample_se();
 
-/** @} */
+void sample_diff();
 
-#endif // SAADC_EXAMPLES_COMMON_H__
+void sample_saadc(int mode);

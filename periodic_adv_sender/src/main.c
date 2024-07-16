@@ -8,12 +8,17 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gap.h>
 
+#include <nrfx_timer.h>
+
 #include "saadc_helpers.h"
 
 #define NUM_RSP_SLOTS	  4
 #define NUM_SUBEVENTS	  4
 #define PACKET_SIZE		  5
 #define SUBEVENT_INTERVAL 0x30
+
+/** @brief Symbol specifying timer instance to be used. */
+#define TIMER_INST_IDX 0
 
 /*
 ================================
@@ -41,6 +46,8 @@ BUILD_ASSERT(ARRAY_SIZE(bufs) == ARRAY_SIZE(subevent_data_params));
 BUILD_ASSERT(ARRAY_SIZE(backing_store) == ARRAY_SIZE(subevent_data_params));
 
 static struct bt_conn *default_conn;
+
+
 
 /*
 ================================
@@ -220,6 +227,37 @@ static bool initialise_bt(void) {
 		return 1;
 	}
 	return 0;
+}
+
+
+void timer_handler(nrf_timer_event_t event_type, void * p_context) {
+	if(event_type == NRF_TIMER_EVENT_COMPARE0) {
+		char * p_msg = p_context;
+		NRFX_LOG_INFO("Timer finished. Context passed to the handler: >%s<", p_msg);
+	}
+}
+
+void timer_setup() {
+	// Set up the timer
+	nrfx_timer_t timer = NRFX_TIMER_INSTANCE(TIMER_INST_IDX);
+
+	nrfx_timer_config_t config =
+	{
+		.frequency = NRF_TIMER_FREQ_16MHz,         						///< Frequency.
+		.mode = NRF_TIMER_MODE_TIMER,           					    ///< Mode of operation.
+		.bit_width = NRF_TIMER_BIT_WIDTH_32,        				  	///< Bit width.
+		.interrupt_priority = NRFX_TIMER_DEFAULT_CONFIG_IRQ_PRIORITY, 	///< Interrupt priority.
+		.p_context = "Some context" 									///< Context passed to interrupt handler.
+	};
+
+	nrfx_err_t status = nrfx_timer_init(&timer, &config, timer_handler);
+    NRFX_ASSERT(status == NRFX_SUCCESS);
+
+#if defined(__ZEPHYR__)
+    IRQ_DIRECT_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_TIMER_INST_GET(TIMER_INST_IDX)), IRQ_PRIO_LOWEST,
+                       NRFX_TIMER_INST_HANDLER_GET(TIMER_INST_IDX), 0);
+#endif
+
 }
 
 int main(void) {

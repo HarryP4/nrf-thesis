@@ -32,51 +32,105 @@
  */
 
 #include "saadc_helpers.h"
-#include <helpers/nrfx_gppi.h>
 
-void gpiote_pin_toggle_task_setup(nrfx_gpiote_pin_t pin)
-{
-    nrfx_err_t status;
-    (void)status;
 
-    uint8_t gpiote_channel;
-    status = nrfx_gpiote_channel_alloc(&gpiote_channel);
+static void _setup_se(void) {
+
+    nrfx_err_t status = nrfx_saadc_init(NRFX_SAADC_DEFAULT_CONFIG_IRQ_PRIORITY);
     NRFX_ASSERT(status == NRFX_SUCCESS);
 
-    static const nrfx_gpiote_output_config_t output_config =
-    {
-        .drive = NRF_GPIO_PIN_H0H1,
-        .input_connect = NRF_GPIO_PIN_INPUT_DISCONNECT,
-        .pull = NRF_GPIO_PIN_NOPULL,
-    };
-
-    const nrfx_gpiote_task_config_t task_config =
-    {
-        .task_ch = gpiote_channel,
-        .polarity = NRF_GPIOTE_POLARITY_TOGGLE,
-        .init_val = NRF_GPIOTE_INITIAL_VALUE_LOW,
-    };
-
-    status = nrfx_gpiote_output_configure(pin, &output_config, &task_config);
+    status = nrfx_saadc_channels_config(m_multiple_channels_se, CHANNEL_COUNT_SE);
     NRFX_ASSERT(status == NRFX_SUCCESS);
 
-    nrfx_gpiote_out_task_enable(pin);
+    uint32_t channels_mask = nrfx_saadc_channels_configured_get();
+    status = nrfx_saadc_simple_mode_set(channels_mask,
+                                    NRF_SAADC_RESOLUTION_8BIT,
+                                    NRF_SAADC_OVERSAMPLE_DISABLED,
+                                    NULL);
+    NRFX_ASSERT(status == NRFX_SUCCESS);
+
+    status = nrfx_saadc_buffer_set(m_samples_buffer_se, CHANNEL_COUNT_SE);
+    NRFX_ASSERT(status == NRFX_SUCCESS);
+
+    return;
 }
 
-void pin_on_event_toggle_setup(nrfx_gpiote_pin_t pin,
-                               uint32_t eep)
-{
-    nrfx_err_t status;
-    (void)status;
 
-    uint8_t gppi_channel;
+static void _setup_diff(void) {
 
-    gpiote_pin_toggle_task_setup(pin);
-
-    status = nrfx_gppi_channel_alloc(&gppi_channel);
+    nrfx_err_t status = nrfx_saadc_init(NRFX_SAADC_DEFAULT_CONFIG_IRQ_PRIORITY);
     NRFX_ASSERT(status == NRFX_SUCCESS);
 
-    nrfx_gppi_channel_endpoints_setup(gppi_channel, eep, nrfx_gpiote_out_task_addr_get(pin));
+    status = nrfx_saadc_channels_config(m_multiple_channels_diff, CHANNEL_COUNT_DIFF);
+    NRFX_ASSERT(status == NRFX_SUCCESS);
 
-    nrfx_gppi_channels_enable(NRFX_BIT(gppi_channel));
+    uint32_t channels_mask = nrfx_saadc_channels_configured_get();
+    status = nrfx_saadc_simple_mode_set(channels_mask,
+                                    NRF_SAADC_RESOLUTION_8BIT,
+                                    NRF_SAADC_OVERSAMPLE_DISABLED,
+                                    NULL);
+    NRFX_ASSERT(status == NRFX_SUCCESS);
+
+    status = nrfx_saadc_buffer_set(m_samples_buffer_diff, CHANNEL_COUNT_DIFF);
+    NRFX_ASSERT(status == NRFX_SUCCESS);
+
+    return;
+}
+
+
+void sample_se() {
+
+    _setup_se();
+
+    nrfx_err_t status = nrfx_saadc_offset_calibrate(NULL);
+    NRFX_ASSERT(status == NRFX_SUCCESS);
+    NRFX_LOG_INFO("Calibration in the blocking manner finished successfully.");
+
+    NRFX_LOG_INFO("Single-ended Sampling %d / %d", sampling_index, SAMPLING_ITERATIONS);
+    NRFX_EXAMPLE_LOG_PROCESS();
+
+    status = nrfx_saadc_mode_trigger();
+    NRFX_ASSERT(status == NRFX_SUCCESS);
+    int i;
+    for (i = 0; i < CHANNEL_COUNT_SE; i++)
+    {
+        NRFX_LOG_INFO("[CHANNEL %u] Sampled value == %d",
+                        m_multiple_channels_se[i].channel_index, m_samples_buffer_se[i]);
+    }
+
+    return;
+}
+
+void sample_diff() {
+
+    _setup_diff();
+
+    nrfx_err_t status = nrfx_saadc_offset_calibrate(NULL);
+    NRFX_ASSERT(status == NRFX_SUCCESS);
+    NRFX_LOG_INFO("Calibration in the blocking manner finished successfully.");
+
+    NRFX_LOG_INFO("Differential Sampling %d / %d", sampling_index, SAMPLING_ITERATIONS);
+    NRFX_EXAMPLE_LOG_PROCESS();
+
+    status = nrfx_saadc_mode_trigger();
+    NRFX_ASSERT(status == NRFX_SUCCESS);
+    int i;
+    for (i = 0; i < CHANNEL_COUNT_DIFF; i++)
+    {
+        NRFX_LOG_INFO("[CHANNEL %u] Sampled value == %d",
+                        m_multiple_channels_diff[i].channel_index, m_samples_buffer_diff[i]);
+    }
+
+    return;
+}
+
+void sample_saadc(int mode) {
+
+    if (mode == SE) {
+        sample_se();
+    } else if (mode == DIFF) {
+        sample_diff();
+    }
+
+    return;
 }
