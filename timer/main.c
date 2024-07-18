@@ -54,7 +54,7 @@
 #define TIMER_INST_IDX 0
 
 /** @brief Symbol specifying time in milliseconds to wait for handler execution. */
-#define TIME_TO_WAIT_MS 5000UL
+#define TIME_TO_WAIT_MS 500UL
 
 /**
  * @brief Function for handling TIMER driver events.
@@ -81,6 +81,7 @@ static void timer_handler(nrf_timer_event_t event_type, void * p_context)
  */
 int main(void)
 {
+    printk("start\n");
     nrfx_err_t status;
     (void)status;
 
@@ -114,13 +115,14 @@ int main(void)
      * trigger an interrupt if internal counter register is equal to desired_ticks.
      */
     nrfx_timer_extended_compare(&timer_inst, NRF_TIMER_CC_CHANNEL0, desired_ticks,
-                                NRF_TIMER_SHORT_COMPARE0_STOP_MASK, true);
+                                NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);
 
     nrfx_timer_enable(&timer_inst);
     NRFX_LOG_INFO("Timer status: %s", nrfx_timer_is_enabled(&timer_inst) ? "enabled" : "disabled");
 
     while (1)
     {
+        //printk("loop\n");
         NRFX_EXAMPLE_LOG_PROCESS();
     }
 }

@@ -59,7 +59,7 @@
  *
  * @sa nrfx_saadc_channel_t
  */
-#define NRFX_SAADC_CHANNEL_SE(_pin_p, _index)       \
+#define SAADC_CHANNEL_SE(_pin_p, _index)       \
 {                                                           \
     .channel_config =                                       \
     {                                                       \
@@ -93,7 +93,7 @@
  *
  * @sa nrfx_saadc_channel_t
  */
-#define NRFX_SAADC_CHANNEL_DIFFERENTIAL(_pin_p, _pin_n, _index) \
+#define SAADC_CHANNEL_DIFFERENTIAL(_pin_p, _pin_n, _index) \
 {                                                                       \
     .channel_config =                                                   \
     {                                                                   \
@@ -114,19 +114,19 @@
 /** SAADC channel differential configuration structure for multiple channel use. */
 static const nrfx_saadc_channel_t m_multiple_channels_diff[] =
 {
-    NRFX_SAADC_CHANNEL_DIFFERENTIAL(NRF_SAADC_INPUT_AIN0, NRF_SAADC_INPUT_AIN1, 0),
-    NRFX_SAADC_CHANNEL_DIFFERENTIAL(NRF_SAADC_INPUT_AIN2, NRF_SAADC_INPUT_AIN3, 1),
-    NRFX_SAADC_CHANNEL_DIFFERENTIAL(NRF_SAADC_INPUT_AIN4, NRF_SAADC_INPUT_AIN5, 2),
-    NRFX_SAADC_CHANNEL_DIFFERENTIAL(NRF_SAADC_INPUT_AIN6, NRF_SAADC_INPUT_AIN7, 3)
+    SAADC_CHANNEL_DIFFERENTIAL(NRF_SAADC_INPUT_AIN0, NRF_SAADC_INPUT_AIN1, 0),
+    SAADC_CHANNEL_DIFFERENTIAL(NRF_SAADC_INPUT_AIN2, NRF_SAADC_INPUT_AIN3, 1),
+    SAADC_CHANNEL_DIFFERENTIAL(NRF_SAADC_INPUT_AIN4, NRF_SAADC_INPUT_AIN5, 2),
+    SAADC_CHANNEL_DIFFERENTIAL(NRF_SAADC_INPUT_AIN6, NRF_SAADC_INPUT_AIN7, 3)
 };
 
 /** SAADC channel single-ended configuration structure for multiple channel use. */
 static const nrfx_saadc_channel_t m_multiple_channels_se[] =
 {
-    NRFX_SAADC_CHANNEL_SE(NRF_SAADC_INPUT_AIN0, 0),
-    NRFX_SAADC_CHANNEL_SE(NRF_SAADC_INPUT_AIN2, 1),
-    NRFX_SAADC_CHANNEL_SE(NRF_SAADC_INPUT_AIN4, 2),
-    NRFX_SAADC_CHANNEL_SE(NRF_SAADC_INPUT_AIN6, 3)
+    SAADC_CHANNEL_SE(NRF_SAADC_INPUT_AIN0, 0),
+    SAADC_CHANNEL_SE(NRF_SAADC_INPUT_AIN2, 1),
+    SAADC_CHANNEL_SE(NRF_SAADC_INPUT_AIN4, 2),
+    SAADC_CHANNEL_SE(NRF_SAADC_INPUT_AIN6, 3)
 };
 
 /** @brief Symbol specifying numbers of multiple channels ( @ref m_multiple_channels) used by SAADC. */
@@ -143,26 +143,20 @@ static nrf_saadc_value_t m_samples_buffer_diff[CHANNEL_COUNT_DIFF];
 /** @brief Symbol specifying the number of SAADC samplings to trigger. */
 #define SAMPLING_ITERATIONS 1
 
+typedef struct saadc_result {
+    uint8_t nchannels;
+    nrf_saadc_value_t* values;
+} saadc_result;
+
+
 // Enum for selecting SAADC mode
 enum mode {
     SE,
     DIFF
 };
 
-/**
- * @brief Function for configuring single ended use of SAADC.
- *
- */
-void setup_se();
+void sample_se(saadc_result* res);
 
-/**
- * @brief Function for configuring differential use of SAADC.
- *
- */
-void setup_diff();
+void sample_diff(saadc_result* res);
 
-void sample_se();
-
-void sample_diff();
-
-void sample_saadc(int mode);
+void sample_saadc(int mode, saadc_result* res);

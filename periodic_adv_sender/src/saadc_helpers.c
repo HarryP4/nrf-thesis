@@ -78,7 +78,7 @@ static void _setup_diff(void) {
 }
 
 
-void sample_se() {
+void sample_se(saadc_result* res) {
 
     _setup_se();
 
@@ -86,22 +86,25 @@ void sample_se() {
     NRFX_ASSERT(status == NRFX_SUCCESS);
     NRFX_LOG_INFO("Calibration in the blocking manner finished successfully.");
 
-    NRFX_LOG_INFO("Single-ended Sampling %d / %d", sampling_index, SAMPLING_ITERATIONS);
-    NRFX_EXAMPLE_LOG_PROCESS();
+    //NRFX_LOG_INFO("Single-ended Sampling %d / %d", sampling_index, SAMPLING_ITERATIONS);
+    //NRFX_EXAMPLE_LOG_PROCESS();
 
     status = nrfx_saadc_mode_trigger();
+
     NRFX_ASSERT(status == NRFX_SUCCESS);
     int i;
     for (i = 0; i < CHANNEL_COUNT_SE; i++)
     {
         NRFX_LOG_INFO("[CHANNEL %u] Sampled value == %d",
                         m_multiple_channels_se[i].channel_index, m_samples_buffer_se[i]);
-    }
 
+        res->values[i] = m_samples_buffer_se[i];
+    }
+    nrfx_saadc_uninit();
     return;
 }
 
-void sample_diff() {
+void sample_diff(saadc_result* res) {
 
     _setup_diff();
 
@@ -109,8 +112,8 @@ void sample_diff() {
     NRFX_ASSERT(status == NRFX_SUCCESS);
     NRFX_LOG_INFO("Calibration in the blocking manner finished successfully.");
 
-    NRFX_LOG_INFO("Differential Sampling %d / %d", sampling_index, SAMPLING_ITERATIONS);
-    NRFX_EXAMPLE_LOG_PROCESS();
+    //NRFX_LOG_INFO("Differential Sampling %d / %d", sampling_index, SAMPLING_ITERATIONS);
+    //NRFX_EXAMPLE_LOG_PROCESS();
 
     status = nrfx_saadc_mode_trigger();
     NRFX_ASSERT(status == NRFX_SUCCESS);
@@ -119,17 +122,19 @@ void sample_diff() {
     {
         NRFX_LOG_INFO("[CHANNEL %u] Sampled value == %d",
                         m_multiple_channels_diff[i].channel_index, m_samples_buffer_diff[i]);
-    }
 
+        res->values[i] = m_samples_buffer_diff[i];
+    }
+    nrfx_saadc_uninit();
     return;
 }
 
-void sample_saadc(int mode) {
+void sample_saadc(int mode, saadc_result* res) {
 
     if (mode == SE) {
-        sample_se();
+        sample_se(res);
     } else if (mode == DIFF) {
-        sample_diff();
+        sample_diff(res);
     }
 
     return;

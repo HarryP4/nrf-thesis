@@ -4,21 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/bluetooth/bluetooth.h>
-#include <zephyr/bluetooth/conn.h>
-#include <zephyr/bluetooth/gap.h>
-
-#include <nrfx_timer.h>
-
+#include "timer_helpers.h"
+#include "bt_helpers.h"
 #include "saadc_helpers.h"
+#include <stdlib.h>
 
-#define NUM_RSP_SLOTS	  4
-#define NUM_SUBEVENTS	  4
-#define PACKET_SIZE		  5
-#define SUBEVENT_INTERVAL 0x30
 
-/** @brief Symbol specifying timer instance to be used. */
-#define TIMER_INST_IDX 0
 
 /*
 ================================
@@ -26,26 +17,10 @@
 ================================
 */
 
-// change these to alter the advertising interval
-static const struct bt_le_per_adv_param per_adv_params = {
-	.interval_min = 0xFF,
-	.interval_max = 0xFF,
-	.options = 0,
-	.num_subevents = NUM_SUBEVENTS,
-	.subevent_interval = SUBEVENT_INTERVAL,
-	.response_slot_delay = 0x5,
-	.response_slot_spacing = 0x50,
-	.num_response_slots = NUM_RSP_SLOTS,
-};
-
-static struct bt_le_per_adv_subevent_data_params subevent_data_params[NUM_SUBEVENTS];
-static struct net_buf_simple bufs[NUM_SUBEVENTS];
-static uint8_t backing_store[NUM_SUBEVENTS][PACKET_SIZE];
+uint8_t backing_store[NUM_SUBEVENTS][PACKET_SIZE];
 
 BUILD_ASSERT(ARRAY_SIZE(bufs) == ARRAY_SIZE(subevent_data_params));
 BUILD_ASSERT(ARRAY_SIZE(backing_store) == ARRAY_SIZE(subevent_data_params));
-
-static struct bt_conn *default_conn;
 
 
 
@@ -55,218 +30,54 @@ static struct bt_conn *default_conn;
 ================================
 */
 
-// Function to handle the request for data from the receiver.
-static void request_cb(struct bt_le_ext_adv *adv, const struct bt_le_per_adv_data_request *request) {
-	int err;
-	uint8_t to_send;
 
-	/* Continuously send the same dummy data and listen to all response slots */
-
-	to_send = MIN(request->count, ARRAY_SIZE(subevent_data_params));
-	for (size_t i = 0; i < to_send; i++) {
-		subevent_data_params[i].subevent =
-			(request->start + i) % per_adv_params.num_subevents;
-		subevent_data_params[i].response_slot_start = 0;
-		subevent_data_params[i].response_slot_count = NUM_RSP_SLOTS;
-		subevent_data_params[i].data = &bufs[i];
+void saadc_sample() {
+	saadc_result res_se = {CHANNEL_COUNT_SE, malloc(sizeof(saadc_result) * CHANNEL_COUNT_SE)};
+	sample_saadc(SE, &res_se);
+	int i = 0;
+	while(i < CHANNEL_COUNT_SE) {
+		printk("Channel %d: %d\n", i, (int) res_se.values[i]);
+		i++;
 	}
-
-	err = bt_le_per_adv_set_subevent_data(adv, to_send, subevent_data_params);
-	if (err) {
-		printk("Failed to set subevent data (err %d)\n", err);
+	saadc_result res_diff = {CHANNEL_COUNT_SE, malloc(sizeof(saadc_result) * CHANNEL_COUNT_DIFF)};
+	sample_saadc(DIFF, &res_diff);
+	i = 0;
+	while(i < CHANNEL_COUNT_DIFF) {
+		printk("Channel %d: %d\n", i, (int) res_diff.values[i]);
+		i++;
 	}
 }
 
-static bool get_address(struct bt_data *data, void *user_data) {
-	bt_addr_le_t *addr = user_data;
-
-	if (data->type == BT_DATA_LE_BT_DEVICE_ADDRESS) {
-		memcpy(addr->a.val, data->data, sizeof(addr->a.val));
-		addr->type = data->data[sizeof(addr->a)];
-
-		return false;
-	}
-
-	return true;
-}
-
-static void response_cb(struct bt_le_ext_adv *adv, struct bt_le_per_adv_response_info *info,
-			struct net_buf_simple *buf)
-{
-	int err;
-	bt_addr_le_t peer;
-	char addr_str[BT_ADDR_LE_STR_LEN];
-	struct bt_conn_le_create_synced_param synced_param;
-	struct bt_le_conn_param conn_param;
-
-	if (!buf) {
-		return;
-	}
-
-	if (default_conn) {
-		/* Do not initiate new connections while already connected */
-		return;
-	}
-
-	bt_addr_le_copy(&peer, &bt_addr_le_none);
-	bt_data_parse(buf, get_address, &peer);
-	if (bt_addr_le_eq(&peer, &bt_addr_le_none)) {
-		/* No address found */
-		return;
-	}
-
-	bt_addr_le_to_str(&peer, addr_str, sizeof(addr_str));
-	printk("Connecting to %s in subevent %d\n", addr_str, info->subevent);
-
-	synced_param.peer = &peer;
-	synced_param.subevent = info->subevent;
-
-	/* Choose same interval as PAwR advertiser to avoid scheduling conflicts */
-	conn_param.interval_min = SUBEVENT_INTERVAL;
-	conn_param.interval_max = SUBEVENT_INTERVAL;
-
-	/* Default values */
-	conn_param.latency = 0;
-	conn_param.timeout = 400;
-
-	err = bt_conn_le_create_synced(adv, &synced_param, &conn_param, &default_conn);
-	if (err) {
-		printk("Failed to initiate connection (err %d)", err);
-	}
-}
-
-static const struct bt_le_ext_adv_cb adv_cb = {
-	.pawr_data_request = request_cb,
-	.pawr_response = response_cb,
-};
-
-static void connected_cb(struct bt_conn *conn, uint8_t err)
-{
-	printk("Connected (err 0x%02X)\n", err);
-
-	__ASSERT(conn == default_conn, "Unexpected connected callback");
-
-	if (err) {
-		bt_conn_unref(default_conn);
-		default_conn = NULL;
-	}
-}
-
-static void disconnected_cb(struct bt_conn *conn, uint8_t reason)
-{
-	printk("Disconnected (reason 0x%02X)\n", reason);
-
-	__ASSERT(conn == default_conn, "Unexpected disconnected callback");
-
-	bt_conn_unref(default_conn);
-	default_conn = NULL;
-}
-
-BT_CONN_CB_DEFINE(conn_cb) = {
-	.connected = connected_cb,
-	.disconnected = disconnected_cb,
-};
-
-static void init_bufs(void)
-{
-	/* Set up some dummy data to send */
-	for (size_t i = 0; i < ARRAY_SIZE(backing_store); i++) {
-		backing_store[i][0] = 67;
-		backing_store[i][1] = 422;
-		backing_store[i][2] = 399;
-		backing_store[i][3] = 86754;
-
-		net_buf_simple_init_with_data(&bufs[i], &backing_store[i],
-					      ARRAY_SIZE(backing_store[i]));
-	}
-}
-
-
-// Function to initialise the Bluetooth subsystem.
-// Abstracted from main function to improve readability.
-static bool initialise_bt(void) {
-	int err;
-	struct bt_le_ext_adv *pawr_adv;
-
-	init_bufs();
-
-	printk("Starting Periodic Advertising Demo\n");
-
-	/* Initialize the Bluetooth Subsystem */
-	err = bt_enable(NULL);
-	if (err) {
-		printk("Bluetooth init failed (err %d)\n", err);
-		return 1;
-	}
-
-	/* Create a non-connectable non-scannable advertising set */
-	err = bt_le_ext_adv_create(BT_LE_EXT_ADV_NCONN_NAME, &adv_cb, &pawr_adv);
-	if (err) {
-		printk("Failed to create advertising set (err %d)\n", err);
-		return 1;
-	}
-
-	/* Set periodic advertising parameters */
-	err = bt_le_per_adv_set_param(pawr_adv, &per_adv_params);
-	if (err) {
-		printk("Failed to set periodic advertising parameters (err %d)\n", err);
-		return 1;
-	}
-
-	/* Enable Periodic Advertising */
-	err = bt_le_per_adv_start(pawr_adv);
-	if (err) {
-		printk("Failed to enable periodic advertising (err %d)\n", err);
-		return 1;
-	}
-
-	printk("Start Periodic Advertising\n");
-	err = bt_le_ext_adv_start(pawr_adv, BT_LE_EXT_ADV_START_DEFAULT);
-	if (err) {
-		printk("Failed to start extended advertising (err %d)\n", err);
-		return 1;
-	}
-	return 0;
-}
-
-
-void timer_handler(nrf_timer_event_t event_type, void * p_context) {
-	if(event_type == NRF_TIMER_EVENT_COMPARE0) {
-		char * p_msg = p_context;
-		NRFX_LOG_INFO("Timer finished. Context passed to the handler: >%s<", p_msg);
-	}
-}
-
-void timer_setup() {
-	// Set up the timer
+int main(void) {
+	
 	nrfx_timer_t timer = NRFX_TIMER_INSTANCE(TIMER_INST_IDX);
-
-	nrfx_timer_config_t config =
-	{
+	nrfx_timer_config_t config = NRFX_TIMER_DEFAULT_CONFIG;
+	config.bit_width = NRF_TIMER_BIT_WIDTH_32;
+	bool flag = 0;
+	config.p_context = &flag;
+	/*{
 		.frequency = NRF_TIMER_FREQ_16MHz,         						///< Frequency.
 		.mode = NRF_TIMER_MODE_TIMER,           					    ///< Mode of operation.
 		.bit_width = NRF_TIMER_BIT_WIDTH_32,        				  	///< Bit width.
 		.interrupt_priority = NRFX_TIMER_DEFAULT_CONFIG_IRQ_PRIORITY, 	///< Interrupt priority.
-		.p_context = "Some context" 									///< Context passed to interrupt handler.
-	};
+		.p_context = "SAADC samples taken"								///< Context passed to interrupt handler.
+	};*/
+	
 
-	nrfx_err_t status = nrfx_timer_init(&timer, &config, timer_handler);
-    NRFX_ASSERT(status == NRFX_SUCCESS);
-
-#if defined(__ZEPHYR__)
-    IRQ_DIRECT_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_TIMER_INST_GET(TIMER_INST_IDX)), IRQ_PRIO_LOWEST,
-                       NRFX_TIMER_INST_HANDLER_GET(TIMER_INST_IDX), 0);
-#endif
-
-}
-
-int main(void) {
-
-	bool err = initialise_bt();
-	if (err) return 1;
+	timer_setup(&timer, &config);
 
 	while (true) {
-		k_sleep(K_SECONDS(1));
+		if (flag) {
+			printk("interrupt\n");
+			saadc_sample();
+			printk("Starting bt:\n\n");
+			bool err = initialise_bt(backing_store);
+			if (err) return 1;
+			k_sleep(K_MSEC(1500));
+			flag = 0;
+			bt_disable();
+		}
+		k_sleep(K_MSEC(100));
 	}
 
 	return 0;

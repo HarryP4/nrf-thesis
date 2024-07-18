@@ -137,50 +137,6 @@ int main(void)
     {
         switch (m_current_state)
         {
-            case STATE_SINGLE_CONFIG:
-                NRFX_LOG_INFO("Single channel SAADC test.");
-
-                status = nrfx_saadc_channel_config(&m_single_channel);
-                NRFX_ASSERT(status == NRFX_SUCCESS);
-
-                uint32_t channels_mask = nrfx_saadc_channels_configured_get();
-                status = nrfx_saadc_simple_mode_set(channels_mask,
-                                                    NRF_SAADC_RESOLUTION_8BIT,
-                                                    NRF_SAADC_OVERSAMPLE_DISABLED,
-                                                    NULL);
-                NRFX_ASSERT(status == NRFX_SUCCESS);
-
-                status = nrfx_saadc_buffer_set(samples_buffer, 1);
-                NRFX_ASSERT(status == NRFX_SUCCESS);
-
-                m_current_state = STATE_SINGLE_SAMPLING;
-                break;
-
-            case STATE_SINGLE_SAMPLING:
-                if (sampling_index++ < SAMPLING_ITERATIONS)
-                {
-                    nrfx_gpiote_out_task_trigger(m_out_pins[0]);
-
-                    status = nrfx_saadc_offset_calibrate(NULL);
-                    NRFX_ASSERT(status == NRFX_SUCCESS);
-                    NRFX_LOG_INFO("Calibration in the blocking manner finished successfully.");
-
-                    NRFX_LOG_INFO("Sampling %d / %d", sampling_index, SAMPLING_ITERATIONS);
-                    NRFX_EXAMPLE_LOG_PROCESS();
-
-                    status = nrfx_saadc_mode_trigger();
-                    NRFX_ASSERT(status == NRFX_SUCCESS);
-
-                    NRFX_LOG_INFO("[CHANNEL %u] Sampled value == %d",
-                                  m_multiple_channels[0].channel_index, samples_buffer[0]);
-                }
-                else
-                {
-                    m_current_state = STATE_MULTIPLE_CONFIG;
-                    sampling_index = 0;
-                }
-                break;
-
             case STATE_MULTIPLE_CONFIG:
                 NRFX_LOG_INFO("Multiple channels SAADC test.");
 
