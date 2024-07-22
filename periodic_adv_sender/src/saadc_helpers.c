@@ -44,7 +44,7 @@ static void _setup_se(void) {
 
     uint32_t channels_mask = nrfx_saadc_channels_configured_get();
     status = nrfx_saadc_simple_mode_set(channels_mask,
-                                    NRF_SAADC_RESOLUTION_8BIT,
+                                    NRF_SAADC_RESOLUTION_12BIT,
                                     NRF_SAADC_OVERSAMPLE_DISABLED,
                                     NULL);
     NRFX_ASSERT(status == NRFX_SUCCESS);
@@ -84,10 +84,6 @@ void sample_se(saadc_result* res) {
 
     nrfx_err_t status = nrfx_saadc_offset_calibrate(NULL);
     NRFX_ASSERT(status == NRFX_SUCCESS);
-    NRFX_LOG_INFO("Calibration in the blocking manner finished successfully.");
-
-    //NRFX_LOG_INFO("Single-ended Sampling %d / %d", sampling_index, SAMPLING_ITERATIONS);
-    //NRFX_EXAMPLE_LOG_PROCESS();
 
     status = nrfx_saadc_mode_trigger();
 
@@ -95,9 +91,6 @@ void sample_se(saadc_result* res) {
     int i;
     for (i = 0; i < CHANNEL_COUNT_SE; i++)
     {
-        NRFX_LOG_INFO("[CHANNEL %u] Sampled value == %d",
-                        m_multiple_channels_se[i].channel_index, m_samples_buffer_se[i]);
-
         res->values[i] = m_samples_buffer_se[i];
     }
     nrfx_saadc_uninit();
@@ -110,19 +103,13 @@ void sample_diff(saadc_result* res) {
 
     nrfx_err_t status = nrfx_saadc_offset_calibrate(NULL);
     NRFX_ASSERT(status == NRFX_SUCCESS);
-    NRFX_LOG_INFO("Calibration in the blocking manner finished successfully.");
 
-    //NRFX_LOG_INFO("Differential Sampling %d / %d", sampling_index, SAMPLING_ITERATIONS);
-    //NRFX_EXAMPLE_LOG_PROCESS();
 
     status = nrfx_saadc_mode_trigger();
     NRFX_ASSERT(status == NRFX_SUCCESS);
     int i;
     for (i = 0; i < CHANNEL_COUNT_DIFF; i++)
     {
-        NRFX_LOG_INFO("[CHANNEL %u] Sampled value == %d",
-                        m_multiple_channels_diff[i].channel_index, m_samples_buffer_diff[i]);
-
         res->values[i] = m_samples_buffer_diff[i];
     }
     nrfx_saadc_uninit();
@@ -138,4 +125,20 @@ void sample_saadc(int mode, saadc_result* res) {
     }
 
     return;
+}
+
+uint8_t to_millivolts(nrf_saadc_value_t value) {
+    return (uint8_t) (2<<12)*1000*value*(1/6)*(1/0.6);
+}
+
+uint8_t to_volts(nrf_saadc_value_t value) {
+    return (uint8_t) (2<<12)*value*(1/6)*(1/0.6);
+}
+
+uint8_t to_microamps(nrf_saadc_value_t value) {
+    return (uint8_t) (2<<12)*1000*1000*value*(1/6)*(1/0.6)*(1/RESISTOR);
+}
+
+uint8_t to_milliamps(nrf_saadc_value_t value) {
+    return (uint8_t) (2<<12)*1000*value*(1/6)*(1/0.6)*(1/RESISTOR);
 }

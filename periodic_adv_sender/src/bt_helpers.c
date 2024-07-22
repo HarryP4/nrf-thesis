@@ -6,7 +6,26 @@
 
 
 #include "bt_helpers.h"
-#include <zephyr/net/buf.h>
+
+
+const struct bt_le_per_adv_param per_adv_params = {
+	.interval_min = PER_ADV_INTERVAL,
+	.interval_max = PER_ADV_INTERVAL,
+	.options = 0, //(BT_LE_PER_ADV_OPT_USE_TX_POWER | BT_LE_PER_ADV_OPT_INCLUDE_ADI),
+	.num_subevents = NUM_SUBEVENTS,
+	.subevent_interval = SUBEVENT_INTERVAL,
+	.response_slot_delay = 0x5,
+	.response_slot_spacing = 0x50,
+	.num_response_slots = NUM_RSP_SLOTS,
+};
+
+const struct bt_le_adv_param* adv_params = BT_LE_ADV_PARAM((BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_USE_NAME), ADVERTISING_INTERVAL, ADVERTISING_INTERVAL, NULL);
+
+struct bt_conn *default_conn;
+struct net_buf_simple bufs[NUM_SUBEVENTS];
+struct bt_le_per_adv_subevent_data_params subevent_data_params[NUM_SUBEVENTS];
+
+BUILD_ASSERT(ARRAY_SIZE(bufs) == ARRAY_SIZE(subevent_data_params));
 
 // Function to handle the request for data from the receiver.
 void request_cb(struct bt_le_ext_adv *adv, const struct bt_le_per_adv_data_request *request) {
@@ -122,19 +141,20 @@ BT_CONN_CB_DEFINE(conn_cb) = {
 
 void init_bufs(uint8_t backing_store[NUM_SUBEVENTS][PACKET_SIZE])
 {
-	/* Set up some dummy data to send */
+	/* Set up data to send */
 	for (size_t i = 0; i < NUM_SUBEVENTS; i++) {
-		backing_store[i][0] = 67;
-		backing_store[i][1] = 422;
-		backing_store[i][2] = 399;
-		backing_store[i][3] = 86754;
-        backing_store[i][4] = 442;
-
 		net_buf_simple_init_with_data(&bufs[i], &backing_store[i],
 					      PACKET_SIZE);
 	}
 }
 
+// resets the buffer and reinitialises it with new backing store data
+void update_bufs(uint8_t backing_store[NUM_SUBEVENTS][PACKET_SIZE]) {
+    for (size_t i = 0; i < NUM_SUBEVENTS; i++) {
+        net_buf_simple_reset(&bufs[i]);
+        init_bufs(backing_store);
+    }
+}
 
 // Function to initialise the Bluetooth subsystem.
 bool initialise_bt(uint8_t backing_store[NUM_SUBEVENTS][PACKET_SIZE]) {
@@ -143,7 +163,7 @@ bool initialise_bt(uint8_t backing_store[NUM_SUBEVENTS][PACKET_SIZE]) {
 
 	init_bufs(backing_store);
 
-	printk("Starting Periodic Advertising Demo\n");
+	
 
 	/* Initialize the Bluetooth Subsystem */
 	err = bt_enable(NULL);
@@ -153,7 +173,7 @@ bool initialise_bt(uint8_t backing_store[NUM_SUBEVENTS][PACKET_SIZE]) {
 	}
 
 	/* Create a non-connectable non-scannable advertising set */
-	err = bt_le_ext_adv_create(BT_LE_EXT_ADV_NCONN_NAME, &adv_cb, &pawr_adv);
+	err = bt_le_ext_adv_create(adv_params, &adv_cb, &pawr_adv);
 	if (err) {
 		printk("Failed to create advertising set (err %d)\n", err);
 		return 1;

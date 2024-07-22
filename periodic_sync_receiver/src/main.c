@@ -22,6 +22,10 @@ static bool per_adv_found;
 static bt_addr_le_t per_addr;
 static uint8_t per_sid;
 
+
+struct bt_le_scan_param* scan_param = BT_LE_SCAN_PARAM(BT_LE_SCAN_TYPE_ACTIVE, BT_LE_SCAN_OPT_FILTER_DUPLICATE, BT_GAP_SCAN_SLOW_INTERVAL_2, BT_GAP_SCAN_SLOW_WINDOW_2);
+
+
 static void sync_cb(struct bt_le_per_adv_sync *sync, struct bt_le_per_adv_sync_synced_info *info)
 {
 	struct bt_le_per_adv_sync_subevent_params params;
@@ -206,7 +210,7 @@ int main(void)
 	bt_le_scan_cb_register(&scan_callbacks);
 	bt_le_per_adv_sync_cb_register(&sync_callbacks);
 
-	err = bt_le_scan_start(BT_LE_SCAN_ACTIVE, NULL);
+	err = bt_le_scan_start(scan_param, NULL);
 	if (err) {
 		printk("failed (err %d)\n", err);
 

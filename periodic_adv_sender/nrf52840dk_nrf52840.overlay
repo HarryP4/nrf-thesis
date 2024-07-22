@@ -18,3 +18,38 @@
 &timer1 {
 	status = "okay";
 };
+
+// was disabled
+&nfct {
+	status = "disabled";
+};
+
+// was disabled
+&uart0 {
+	status = "disabled";
+};
+
+// was disabled
+&usbd {
+	status = "disabled";
+};
+
+// was disabled
+&ecb {
+	status = "okay";
+};
+
+// was disabled
+&ccm {
+	status = "okay";
+};
+
+// was disabled
+&pwm0 {
+	status = "disabled";
+};
+
+// was disabled
+&uart1 {
+	status = "disabled";
+};

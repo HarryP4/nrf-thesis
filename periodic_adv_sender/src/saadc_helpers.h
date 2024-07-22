@@ -33,14 +33,6 @@
 
 
 #include <nrfx_gpiote.h>
-
-
-#define NRFX_LOG_MODULE                 EXAMPLE
-#define NRFX_EXAMPLE_CONFIG_LOG_ENABLED 1
-#define NRFX_EXAMPLE_CONFIG_LOG_LEVEL   3
-#include <nrfx_log.h>
-
-// #include <nrfx_example.h>
 #include <nrfx_saadc.h>
 
 
@@ -142,6 +134,8 @@ static nrf_saadc_value_t m_samples_buffer_diff[CHANNEL_COUNT_DIFF];
 
 /** @brief Symbol specifying the number of SAADC samplings to trigger. */
 #define SAMPLING_ITERATIONS 1
+#define RESISTOR 100
+
 
 typedef struct saadc_result {
     uint8_t nchannels;
@@ -160,3 +154,11 @@ void sample_se(saadc_result* res);
 void sample_diff(saadc_result* res);
 
 void sample_saadc(int mode, saadc_result* res);
+
+uint8_t to_millivolts(nrf_saadc_value_t value);
+
+uint8_t to_volts(nrf_saadc_value_t value);
+
+uint8_t to_microamps(nrf_saadc_value_t value);
+
+uint8_t to_milliamps(nrf_saadc_value_t value);

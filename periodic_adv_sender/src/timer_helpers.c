@@ -22,7 +22,7 @@ void timer_setup(nrfx_timer_t* timer, nrfx_timer_config_t* config) {
 	nrfx_timer_clear(timer);
 
 	// Creating variable desired_ticks to store the output of nrfx_timer_ms_to_ticks function
-	uint32_t desired_ticks = nrfx_timer_ms_to_ticks(timer, 5000);
+	uint32_t desired_ticks = nrfx_timer_ms_to_ticks(timer, DESIRED_MS_DELAY);
 
 	// Setting the timer channel NRF_TIMER_CC_CHANNEL0 in the extended compare mode to stop the timer and
 	// trigger an interrupt if internal counter register is equal to desired_ticks.
@@ -30,7 +30,4 @@ void timer_setup(nrfx_timer_t* timer, nrfx_timer_config_t* config) {
 								NRF_TIMER_SHORT_COMPARE1_CLEAR_MASK, true);
 
 	nrfx_timer_enable(timer);
-
-	NRFX_LOG_INFO("Timer status: %s", nrfx_timer_is_enabled(timer) ? "enabled" : "disabled");
-
 }
