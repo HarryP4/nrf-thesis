@@ -9,8 +9,8 @@
 #define NUM_SUBEVENTS	  4
 #define PACKET_SIZE		  8
 #define SUBEVENT_INTERVAL 0x30
-#define ADVERTISING_INTERVAL BT_GAP_ADV_SLOW_INT_MAX
-#define PER_ADV_INTERVAL 0x4E20
+#define ADVERTISING_INTERVAL BT_GAP_ADV_FAST_INT_MIN_2
+#define PER_ADV_INTERVAL 0x100
 
 extern struct bt_conn *default_conn;
 extern struct net_buf_simple bufs[NUM_SUBEVENTS];

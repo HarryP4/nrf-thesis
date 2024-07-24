@@ -23,7 +23,7 @@ static bt_addr_le_t per_addr;
 static uint8_t per_sid;
 
 
-struct bt_le_scan_param* scan_param = BT_LE_SCAN_PARAM(BT_LE_SCAN_TYPE_ACTIVE, BT_LE_SCAN_OPT_FILTER_DUPLICATE, BT_GAP_SCAN_SLOW_INTERVAL_2, BT_GAP_SCAN_SLOW_WINDOW_2);
+struct bt_le_scan_param* scan_param = BT_LE_SCAN_ACTIVE; //BT_LE_SCAN_PARAM(BT_LE_SCAN_TYPE_ACTIVE, BT_LE_SCAN_OPT_FILTER_DUPLICATE, BT_GAP_SCAN_FAST_INTERVAL, BT_GAP_SCAN_FAST_WINDOW);
 
 
 static void sync_cb(struct bt_le_per_adv_sync *sync, struct bt_le_per_adv_sync_synced_info *info)
@@ -76,7 +76,7 @@ static void recv_cb(struct bt_le_per_adv_sync *sync,
 
 	if (buf && buf->len) {
 		// Print received data
-		printk("DATA RECEIVED:\n");
+		//printk("DATA RECEIVED:\n");
 		for(int i = 0; i < buf->len; i++) {
 			printk("%d\n", buf->data[i]);
 		}
@@ -99,7 +99,7 @@ static void recv_cb(struct bt_le_per_adv_sync *sync,
 		}
 
 		bt_addr_le_to_str(&oob.addr, addr_str, sizeof(addr_str));
-		printk("Responding with own addr: %s\n", addr_str);
+		//printk("Responding with own addr: %s\n", addr_str);
 
 		net_buf_simple_add_u8(&rsp_buf, sizeof(bt_addr_le_t));
 		net_buf_simple_add_u8(&rsp_buf, BT_DATA_LE_BT_DEVICE_ADDRESS);
@@ -125,7 +125,7 @@ static struct bt_le_per_adv_sync_cb sync_callbacks = {
 
 static void connected_cb(struct bt_conn *conn, uint8_t err)
 {
-	printk("Connected (err 0x%02X)\n", err);
+	//printk("Connected (err 0x%02X)\n", err);
 
 	if (err) {
 		return;
@@ -140,7 +140,7 @@ static void disconnected_cb(struct bt_conn *conn, uint8_t reason)
 	bt_conn_unref(default_conn);
 	default_conn = NULL;
 
-	printk("Disconnected (reason 0x%02X)\n", reason);
+	//printk("Disconnected (reason 0x%02X)\n", reason);
 
 	k_sem_give(&sem_disconnected);
 }
@@ -263,7 +263,7 @@ int main(void)
 			return 0;
 		}
 
-		printk("Disconnecting\n");
+		//printk("Disconnecting\n");
 
 		err = bt_conn_disconnect(default_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
 		if (err) {

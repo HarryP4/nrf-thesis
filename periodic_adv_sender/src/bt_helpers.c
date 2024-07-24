@@ -19,7 +19,7 @@ const struct bt_le_per_adv_param per_adv_params = {
 	.num_response_slots = NUM_RSP_SLOTS,
 };
 
-const struct bt_le_adv_param* adv_params = BT_LE_ADV_PARAM((BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_USE_NAME), ADVERTISING_INTERVAL, ADVERTISING_INTERVAL, NULL);
+const struct bt_le_adv_param* adv_params = BT_LE_EXT_ADV_NCONN_NAME; //BT_LE_ADV_PARAM((BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_USE_NAME), ADVERTISING_INTERVAL, ADVERTISING_INTERVAL, NULL);
 
 struct bt_conn *default_conn;
 struct net_buf_simple bufs[NUM_SUBEVENTS];
@@ -105,6 +105,7 @@ void response_cb(struct bt_le_ext_adv *adv, struct bt_le_per_adv_response_info *
 	if (err) {
 		printk("Failed to initiate connection (err %d)", err);
 	}
+	//bt_le_adv_stop();
 }
 
 const struct bt_le_ext_adv_cb adv_cb = {
@@ -162,8 +163,6 @@ bool initialise_bt(uint8_t backing_store[NUM_SUBEVENTS][PACKET_SIZE]) {
 	struct bt_le_ext_adv *pawr_adv;
 
 	init_bufs(backing_store);
-
-	
 
 	/* Initialize the Bluetooth Subsystem */
 	err = bt_enable(NULL);

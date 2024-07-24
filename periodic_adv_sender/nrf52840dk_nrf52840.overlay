@@ -34,12 +34,12 @@
 	status = "disabled";
 };
 
-// was disabled
+// was okay
 &ecb {
 	status = "okay";
 };
 
-// was disabled
+// was okay
 &ccm {
 	status = "okay";
 };
