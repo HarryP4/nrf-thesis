@@ -59,10 +59,10 @@ void saadc_sample() {
 
 	sample_saadc(DIFF, &res_diff);
 
-	backing_store[0][4] = (uint8_t) res_diff.values[0]; // ADC channel 0
-	backing_store[0][5] = (uint8_t) res_diff.values[1]; // ADC channel 1
-	backing_store[0][6] = (uint8_t) res_diff.values[2]; // ADC channel 2
-	backing_store[0][7] = (uint8_t) res_diff.values[3]; // ADC channel 3
+	backing_store[0][4] = (uint8_t) res_diff.values[0]; // ADC channels 0 & 1
+	backing_store[0][5] = (uint8_t) res_diff.values[1]; // ADC channels 2 & 3
+	backing_store[0][6] = (uint8_t) res_diff.values[2]; // ADC channels 4 & 5
+	backing_store[0][7] = (uint8_t) res_diff.values[3]; // ADC channels 6 & 7
 
 
 	i = 0;
